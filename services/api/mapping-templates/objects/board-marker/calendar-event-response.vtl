@@ -1,0 +1,9 @@
+#if ($context.result.error)
+    $utils.error($context.result.error, "LambdaFailure", $context.result)
+#else
+    #if ($context.result.data.isEmpty())
+        null
+    #else
+        $context.result.data
+    #end
+#end

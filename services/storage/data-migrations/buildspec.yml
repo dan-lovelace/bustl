@@ -1,0 +1,27 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - echo "Installing golang-migrate CLI [https://github.com/golang-migrate/migrate/tree/master/cmd/migrate]"
+
+      # lock version so it doesn't auto-update
+      - GOLANG_MIGRATE_VERSION="4.14.1"
+      - GOLANG_MIGRATE_FILENAME="migrate.linux-amd64"
+
+      # download file
+      - curl -L https://github.com/golang-migrate/migrate/releases/download/v$GOLANG_MIGRATE_VERSION/$GOLANG_MIGRATE_FILENAME.tar.gz | tar xvz
+
+      # move to bin to use easier
+      - mv $GOLANG_MIGRATE_FILENAME /usr/bin/migrate
+
+      # check version to test
+      - migrate --version
+
+  build:
+    commands:
+      # create database users
+      - bin/create-db-app-user $TERRAFORM_WORKSPACE
+
+      # migrate up
+      - make migrateup

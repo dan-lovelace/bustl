@@ -1,0 +1,24 @@
+# golang
+bin
+
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# test results
+*.test
+
+# npm
+node_modules/
+
+# serverless
+.serverless
+
+# terraform
+.terraform
+*.out
+
+# other
+.notes/

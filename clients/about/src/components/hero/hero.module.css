@@ -1,0 +1,38 @@
+.hero {
+    height: 48rem;
+}
+
+@media (min-width: 1024px) {
+    .hero {
+        height: 55rem;
+    }
+}
+
+.hero-copy {
+    padding-left: 2rem;
+    padding-right: 2rem;
+    padding-top: 12rem;
+}
+
+@media (min-width: 640px) {
+    .hero-copy {
+        padding-left: 5rem;
+        padding-right: 5rem;
+        padding-top: 15rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .hero-copy {
+        padding-left: 5rem;
+        padding-right: 5rem;
+        padding-top: 15rem;
+    }
+}
+
+@media (min-width: 1280px) {
+    .hero-copy {
+        padding-left: 10rem;
+        padding-right: 25rem;
+    }
+}

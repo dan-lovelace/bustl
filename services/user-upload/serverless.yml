@@ -1,0 +1,61 @@
+service: user-upload
+frameworkVersion: '2'
+
+provider:
+  name: aws
+  runtime: go1.x
+  lambdaHashingVersion: 20201221
+  stage: ${opt:stage}
+  region: us-east-2
+  deploymentBucket:
+    name: ${ssm:/${self:provider.stage}/serverless_deployment_bucket~true}
+  vpc:
+    securityGroupIds:
+      - ${ssm:/${self:provider.stage}/default_security_group~true}
+    subnetIds:
+      - ${ssm:/${self:provider.stage}/private_subnet_1~true}
+      - ${ssm:/${self:provider.stage}/private_subnet_2~true}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - secretsmanager:GetSecretValue
+      Resource:
+        - ${ssm:/${self:provider.stage}/db_appuser_secret_arn~true}
+    - Effect: Allow
+      Action:
+        - sqs:*
+      Resource:
+        - ${ssm:/${self:provider.stage}/user_upload_processing_queue_arn~true}
+    - Effect: Allow
+      Action:
+        - rekognition:*
+      Resource: '*'
+    - Effect: Allow
+      Action:
+        - s3:*
+      Resource:
+        - arn:aws:s3:::${ssm:/${self:provider.stage}/user_uploads_bucket_name~true}
+        - arn:aws:s3:::${ssm:/${self:provider.stage}/user_uploads_bucket_name~true}/*
+  environment:
+    # secrets manager values
+    DB_APPUSER_SECRET_ID:         ${ssm:/${self:provider.stage}/db_appuser_secret_id~true}
+    
+    # ssm only
+    TERRAFORM_WORKSPACE:      ${ssm:/${self:provider.stage}/terraform_workspace~true}
+    USER_UPLOADS_BUCKET_NAME: ${ssm:/${self:provider.stage}/user_uploads_bucket_name~true}
+
+package:
+  exclude:
+    - ./**
+  include:
+    - ./bin/**
+    - ./res/**
+
+functions:
+  userUpload:
+    handler: bin/user-upload
+    package:
+      include:
+        - bin/user-upload
+    events:
+      - sqs: ${ssm:/${self:provider.stage}/user_upload_processing_queue_arn~true}

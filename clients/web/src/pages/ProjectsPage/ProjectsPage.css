@@ -1,0 +1,8 @@
+.project-note-type .smooth-dnd-container {
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+
+.project-note-type .smooth-dnd-container.dragging {
+  min-height: 2rem !important;
+}

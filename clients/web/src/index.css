@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .z-below {
+    z-index: -1;
+  }
+
+  .z-default {
+    z-index: 1;
+  }
+
+  .z-header {
+    z-index: 10;
+  }
+
+  .z-menu-overlay {
+    z-index: 20;
+  }
+
+  .z-menu {
+    z-index: 21;
+  }
+
+  .z-modal-overlay {
+    z-index: 30;
+  }
+
+  .z-modal {
+    z-index: 31;
+  }
+}
+
+@import "components/CreateBoardButton/CreateBoardButton.css";
+@import "pages/ProjectsPage/ProjectsPage.css";
+
+* {
+  /* fix an issue with gray boxes showing through stuff on ios */
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Oxygen", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", "Arial",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #3c4044;
+}
+
+/* noscript styling */
+body > span {
+  height: 100%;
+  display: block;
+  overflow-y: auto;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+    monospace;
+}
+
+.card-ghost {
+  transition: transform 0.18s ease;
+  transform: rotateZ(5deg);
+}
+
+.card-ghost-drop {
+  transition: transform 0.18s ease-in-out;
+  transform: rotateZ(0deg);
+}
+
+.drop-preview {
+  background-color: rgba(150, 150, 200, 0.1);
+  border: 1px dashed;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.cards-drop-preview {
+  background-color: rgba(150, 150, 200, 0.1);
+  border: 1px dashed #abc;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}

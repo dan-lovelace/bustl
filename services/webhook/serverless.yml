@@ -1,0 +1,42 @@
+service: webhook
+frameworkVersion: '2'
+
+provider:
+  name: aws
+  runtime: go1.x
+  lambdaHashingVersion: 20201221
+  stage: ${opt:stage}
+  region: us-east-2
+  deploymentBucket:
+    name: ${ssm:/${self:provider.stage}/serverless_deployment_bucket~true}
+  vpc:
+    securityGroupIds:
+      - ${ssm:/${self:provider.stage}/default_security_group~true}
+    subnetIds:
+      - ${ssm:/${self:provider.stage}/private_subnet_1~true}
+      - ${ssm:/${self:provider.stage}/private_subnet_2~true}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - secretsmanager:GetSecretValue
+      Resource:
+        - ${ssm:/${self:provider.stage}/stripe_private_key_secret_arn~true}
+  environment:
+    STRIPE_PRIVATE_KEY_SECRET_ID: ${ssm:/${self:provider.stage}/stripe_private_key_secret_id~true}
+    TERRAFORM_WORKSPACE:          ${ssm:/${self:provider.stage}/terraform_workspace~true}
+
+package:
+  individually: true
+  exclude:
+    - "./**"
+
+functions:
+  stripe:
+    handler: bin/stripe
+    package:
+      include:
+        - bin/stripe
+    events:
+      - httpApi:
+          path: /stripe
+          method: post

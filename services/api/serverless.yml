@@ -1,0 +1,496 @@
+service: appsync
+frameworkVersion: "2"
+
+provider:
+  name: aws
+  runtime: go1.x
+  lambdaHashingVersion: 20201221
+  stage: ${opt:stage}
+  region: us-east-2
+  deploymentBucket:
+    name: ${ssm:/${self:provider.stage}/serverless_deployment_bucket~true}
+  vpc:
+    securityGroupIds:
+      - ${ssm:/${self:provider.stage}/default_security_group~true}
+    subnetIds:
+      - ${ssm:/${self:provider.stage}/private_subnet_1~true}
+      - ${ssm:/${self:provider.stage}/private_subnet_2~true}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - secretsmanager:GetSecretValue
+      Resource:
+        - ${ssm:/${self:provider.stage}/db_appuser_secret_arn~true}
+        - ${ssm:/${self:provider.stage}/stripe_private_key_secret_arn~true}
+    - Effect: Allow
+      Action:
+        - s3:*
+      Resource:
+        - arn:aws:s3:::${ssm:/${self:provider.stage}/user_uploads_bucket_name~true}
+        - arn:aws:s3:::${ssm:/${self:provider.stage}/user_uploads_bucket_name~true}/*
+    - Effect: Allow
+      Action:
+        - sqs:SendMessage
+      Resource:
+        - ${ssm:/${self:provider.stage}/user_upload_processing_queue_arn~true}
+    - Effect: Allow
+      Action:
+        - cognito-idp:AdminAddUserToGroup
+        - cognito-idp:AdminGetUser
+        - cognito-idp:AdminUpdateUserAttributes
+      Resource:
+        - ${ssm:/${self:provider.stage}/cognito_user_pool_arn~true}
+    - Effect: Allow
+      Action:
+        - rekognition:*
+      Resource: '*'
+    - Effect: Allow
+      Action:
+        - sns:Publish
+      Resource:
+        - ${ssm:/${self:provider.stage}/contact_message_topic_arn~true}
+  environment:
+    # secrets manager values
+    DB_APPUSER_SECRET_ID:         ${ssm:/${self:provider.stage}/db_appuser_secret_id~true}
+    STRIPE_PRIVATE_KEY_SECRET_ID: ${ssm:/${self:provider.stage}/stripe_private_key_secret_id~true}
+
+    # ssm only
+    TERRAFORM_WORKSPACE:                ${ssm:/${self:provider.stage}/terraform_workspace~true}
+    USER_UPLOADS_BUCKET_NAME:           ${ssm:/${self:provider.stage}/user_uploads_bucket_name~true}
+    CACHE_ENDPOINT:                     ${ssm:/${self:provider.stage}/cache_endpoint~true}
+    USER_UPLOADS_PROCESSING_QUEUE_URL:  ${ssm:/${self:provider.stage}/user_upload_processing_queue_url~true}
+    USER_POOL_ID:                       ${ssm:/${self:provider.stage}/cognito_user_pool_id~true}
+    ABOUT_CLIENT_DOMAIN_NAME:           ${ssm:/${self:provider.stage}/about_client_domain_name~true}
+    CONTACT_MESSAGE_TOPIC_ARN:          ${ssm:/${self:provider.stage}/contact_message_topic_arn~true}
+package:
+  individually: true
+  exclude:
+    - "./**"
+
+functions:
+  appUser:
+    handler: bin/app-user
+    package:
+      include:
+        - bin/app-user
+        - handlers/app-user/static/*
+  board:
+    handler: bin/board
+    package:
+      include:
+        - bin/board
+  boardMarker:
+    handler: bin/board-marker
+    package:
+      include:
+        - bin/board-marker
+  calendarEvent:
+    handler: bin/calendar-event
+    package:
+      include:
+        - bin/calendar-event
+  contactMessage:
+    handler: bin/contact-message
+    package:
+      include:
+        - bin/contact-message
+  image:
+    handler: bin/image
+    package:
+      include:
+        - bin/image
+        - handlers/image/static/*
+  note:
+    handler: bin/note
+    package:
+      include:
+        - bin/note
+  noteType:
+    handler: bin/note-type
+    package:
+      include:
+        - bin/note-type
+  project:
+    handler: bin/project
+    package:
+      include:
+        - bin/project
+  subscription:
+    handler: bin/subscription
+    package:
+      include:
+        - bin/subscription
+custom:
+  appSync:
+    name: ${self:provider.stage} AppSync
+    # apiKey # only required for update-appsync/delete-appsync
+    authenticationType: AMAZON_COGNITO_USER_POOLS
+    schema: schema.graphql
+    # Caching options. Disabled by default
+    # read more at https://aws.amazon.com/blogs/mobile/appsync-caching-transactions/
+    # and https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-appsync-apicache.html
+    # caching:
+    #   behavior: FULL_REQUEST_CACHING # or PER_RESOLVER_CACHING. Required
+    #   ttl: 3600 # The TTL of the cache. Optional. Default: 3600
+    #   # atRestEncryption: # Bool, Optional. Enable at rest encryption. disabled by default.
+    #   # transitEncryption: # Bool, Optional. Enable transit encryption. disabled by default.
+    #   type: 'T2_SMALL' # Cache instance size. Optional. Default: 'T2_SMALL'
+    # if AMAZON_COGNITO_USER_POOLS
+    userPoolConfig:
+      # awsRegion: # defaults to provider region
+      defaultAction: ALLOW
+      userPoolId: ${ssm:/${self:provider.stage}/cognito_user_pool_id~true}
+      # appIdClientRegex: # optional
+
+    # Array of additional authentication providers
+    # additionalAuthenticationProviders:
+    #   - authenticationType: API_KEY
+    #   - authenticationType: AWS_IAM
+    #   - authenticationType: OPENID_CONNECT
+    #     openIdConnectConfig:
+    #       issuer:
+    #       clientId:
+    #       iatTTL:
+    #       authTTL:
+    #   - authenticationType: AMAZON_COGNITO_USER_POOLS
+    #     userPoolConfig:
+    #       awsRegion: # defaults to provider region
+    #       userPoolId: # required # user pool ID
+    #       appIdClientRegex: # optional
+    logConfig:
+      loggingRoleArn: ${ssm:/${self:provider.stage}/appsync_logging_role_arn~true}
+      level: ERROR # Logging Level: NONE | ERROR | ALL
+      excludeVerboseContent: false
+    mappingTemplates:
+      # ----- QUERIES ----- #
+      - type: Query
+        field: app_users
+        request: query/app-users-request.vtl
+        response: query/app-users-response.vtl
+        dataSource: AppUser
+      - type: Query
+        field: board
+        request: query/board-request.vtl
+        response: query/board-response.vtl
+        dataSource: Board
+      - type: Query
+        field: boards
+        request: query/boards-request.vtl
+        response: query/boards-response.vtl
+        dataSource: Board
+      - type: Query
+        field: flush_image_cache
+        request: query/flush-image-cache-request.vtl
+        response: query/flush-image-cache-response.vtl
+        dataSource: Image
+      - type: Query
+        field: image_upload
+        request: query/image-upload-request.vtl
+        response: query/image-upload-response.vtl
+        dataSource: Image
+      - type: Query
+        field: images
+        request: query/images-request.vtl
+        response: query/images-response.vtl
+        dataSource: Image
+      - type: Query
+        field: me
+        request: query/me-request.vtl
+        response: query/me-response.vtl
+        dataSource: AppUser
+      - type: Query
+        field: note
+        request: query/note-request.vtl
+        response: query/note-response.vtl
+        dataSource: Note
+      - type: Query
+        field: notes
+        request: query/notes-request.vtl
+        response: query/notes-response.vtl
+        dataSource: Note
+      - type: Query
+        field: note_type
+        request: query/note-type-request.vtl
+        response: query/note-type-response.vtl
+        dataSource: NoteType
+      - type: Query
+        field: note_types
+        request: query/note-types-request.vtl
+        response: query/note-types-response.vtl
+        dataSource: NoteType
+      - type: Query
+        field: project
+        request: query/project-request.vtl
+        response: query/project-response.vtl
+        dataSource: Project
+      - type: Query
+        field: projects
+        request: query/projects-request.vtl
+        response: query/projects-response.vtl
+        dataSource: Project
+
+      # ----- MUTATIONS ----- #
+      - type: Mutation
+        field: acceptTerms
+        request: mutation/app-user/accept-terms-request.vtl
+        response: mutation/app-user/accept-terms-response.vtl
+        dataSource: AppUser
+      - type: Mutation
+        field: createAppUser
+        request: mutation/app-user/create-app-user-request.vtl
+        response: mutation/app-user/create-app-user-response.vtl
+        dataSource: AppUser
+      - type: Mutation
+        field: updateAppUser
+        request: mutation/app-user/update-app-user-request.vtl
+        response: mutation/app-user/update-app-user-response.vtl
+        dataSource: AppUser
+      - type: Mutation
+        field: updateMe
+        request: mutation/app-user/update-me-request.vtl
+        response: mutation/app-user/update-me-response.vtl
+        dataSource: AppUser
+      - type: Mutation
+        field: archiveBoards
+        request: mutation/board/archive-boards-request.vtl
+        response: mutation/board/archive-boards-response.vtl
+        dataSource: Board
+      - type: Mutation
+        field: createBoard
+        request: mutation/board/create-board-request.vtl
+        response: mutation/board/create-board-response.vtl
+        dataSource: Board
+      - type: Mutation
+        field: updateBoard
+        request: mutation/board/update-board-request.vtl
+        response: mutation/board/update-board-response.vtl
+        dataSource: Board
+      - type: Mutation
+        field: deleteBoards
+        request: mutation/board/delete-boards-request.vtl
+        response: mutation/board/delete-boards-response.vtl
+        dataSource: Board
+      - type: Mutation
+        field: createImage
+        request: mutation/image/create-image-request.vtl
+        response: mutation/image/create-image-response.vtl
+        dataSource: Image
+      - type: Mutation
+        field: createBoardMarker
+        request: mutation/board-marker/create-board-marker-request.vtl
+        response: mutation/board-marker/create-board-marker-response.vtl
+        dataSource: BoardMarker
+      - type: Mutation
+        field: updateBoardMarker
+        request: mutation/board-marker/update-board-marker-request.vtl
+        response: mutation/board-marker/update-board-marker-response.vtl
+        dataSource: BoardMarker
+      - type: Mutation
+        field: deleteBoardMarkers
+        request: mutation/board-marker/delete-board-markers-request.vtl
+        response: mutation/board-marker/delete-board-markers-response.vtl
+        dataSource: BoardMarker
+      - type: Mutation
+        field: createCalendarEvent
+        request: mutation/calendar-event/create-calendar-event-request.vtl
+        response: mutation/calendar-event/create-calendar-event-response.vtl
+        dataSource: CalendarEvent
+      - type: Mutation
+        field: updateCalendarEvent
+        request: mutation/calendar-event/update-calendar-event-request.vtl
+        response: mutation/calendar-event/update-calendar-event-response.vtl
+        dataSource: CalendarEvent
+      - type: Mutation
+        field: deleteCalendarEvents
+        request: mutation/calendar-event/delete-calendar-events-request.vtl
+        response: mutation/calendar-event/delete-calendar-events-response.vtl
+        dataSource: CalendarEvent
+      - type: Mutation
+        field: createContactMessage
+        request: mutation/contact-message/create-contact-message-request.vtl
+        response: mutation/contact-message/create-contact-message-response.vtl
+        dataSource: ContactMessage
+      - type: Mutation
+        field: createNote
+        request: mutation/note/create-note-request.vtl
+        response: mutation/note/create-note-response.vtl
+        dataSource: Note
+      - type: Mutation
+        field: updateNote
+        request: mutation/note/update-note-request.vtl
+        response: mutation/note/update-note-response.vtl
+        dataSource: Note
+      - type: Mutation
+        field: deleteNotes
+        request: mutation/note/delete-notes-request.vtl
+        response: mutation/note/delete-notes-response.vtl
+        dataSource: Note
+      - type: Mutation
+        field: createNoteType
+        request: mutation/note-type/create-note-type-request.vtl
+        response: mutation/note-type/create-note-type-response.vtl
+        dataSource: NoteType
+      - type: Mutation
+        field: updateNoteType
+        request: mutation/note-type/update-note-type-request.vtl
+        response: mutation/note-type/update-note-type-response.vtl
+        dataSource: NoteType
+      - type: Mutation
+        field: deleteNoteTypes
+        request: mutation/note-type/delete-note-types-request.vtl
+        response: mutation/note-type/delete-note-types-response.vtl
+        dataSource: NoteType
+      - type: Mutation
+        field: createProject
+        request: mutation/project/create-project-request.vtl
+        response: mutation/project/create-project-response.vtl
+        dataSource: Project
+      - type: Mutation
+        field: updateProject
+        request: mutation/project/update-project-request.vtl
+        response: mutation/project/update-project-response.vtl
+        dataSource: Project
+      - type: Mutation
+        field: deleteProjects
+        request: mutation/project/delete-projects-request.vtl
+        response: mutation/project/delete-projects-response.vtl
+        dataSource: Project
+
+      # ----- OBJECTS -----#
+      - type: AppUser
+        field: subscription
+        request: objects/app-user/subscription-request.vtl
+        response: objects/app-user/subscription-response.vtl
+        dataSource: Subscription
+
+      - type: Board
+        field: app_user
+        request: objects/board/app-user-request.vtl
+        response: objects/board/app-user-response.vtl
+        dataSource: AppUser
+      - type: Board
+        field: image
+        request: objects/board/image-request.vtl
+        response: objects/board/image-response.vtl
+        dataSource: Image
+      - type: Board
+        field: markers
+        request: objects/board/markers-request.vtl
+        response: objects/board/markers-response.vtl
+        dataSource: BoardMarker
+
+      - type: BoardMarker
+        field: board
+        request: objects/board-marker/board-request.vtl
+        response: objects/board-marker/board-response.vtl
+        dataSource: Board
+      - type: BoardMarker
+        field: note
+        request: objects/board-marker/note-request.vtl
+        response: objects/board-marker/note-response.vtl
+        dataSource: Note
+      - type: BoardMarker
+        field: calendar_event
+        request: objects/board-marker/calendar-event-request.vtl
+        response: objects/board-marker/calendar-event-response.vtl
+        dataSource: CalendarEvent
+
+      - type: Image
+        field: app_user
+        request: objects/image/app-user-request.vtl
+        response: objects/image/app-user-response.vtl
+        dataSource: AppUser
+
+      - type: Note
+        field: note_type
+        request: objects/note/note-type-request.vtl
+        response: objects/note/note-type-response.vtl
+        dataSource: NoteType
+
+      - type: NoteType
+        field: notes
+        request: objects/note-type/notes-request.vtl
+        response: objects/note-type/notes-response.vtl
+        dataSource: Note
+      - type: NoteType
+        field: project
+        request: objects/note-type/project-request.vtl
+        response: objects/note-type/project-response.vtl
+        dataSource: Project
+
+      - type: Project
+        field: note_types
+        request: objects/project/note-types-request.vtl
+        response: objects/project/note-types-response.vtl
+        dataSource: NoteType
+
+    dataSources:
+      - name: AppUser
+        type: AWS_LAMBDA
+        config:
+          lambdaFunctionArn: { Fn::GetAtt: [AppUserLambdaFunction, Arn] }
+      - name: Board
+        type: AWS_LAMBDA
+        config:
+          lambdaFunctionArn: { Fn::GetAtt: [BoardLambdaFunction, Arn] }
+      - name: BoardMarker
+        type: AWS_LAMBDA
+        config:
+          lambdaFunctionArn: { Fn::GetAtt: [BoardMarkerLambdaFunction, Arn] }
+      - name: CalendarEvent
+        type: AWS_LAMBDA
+        config:
+          lambdaFunctionArn: { Fn::GetAtt: [CalendarEventLambdaFunction, Arn] }
+      - name: ContactMessage
+        type: AWS_LAMBDA
+        config:
+          lambdaFunctionArn: { Fn::GetAtt: [ContactMessageLambdaFunction, Arn] }
+      - name: Image
+        type: AWS_LAMBDA
+        config:
+          lambdaFunctionArn: { Fn::GetAtt: [ImageLambdaFunction, Arn] }
+      - name: Note
+        type: AWS_LAMBDA
+        config:
+          lambdaFunctionArn: { Fn::GetAtt: [NoteLambdaFunction, Arn] }
+      - name: NoteType
+        type: AWS_LAMBDA
+        config:
+          lambdaFunctionArn: { Fn::GetAtt: [NoteTypeLambdaFunction, Arn] }
+      - name: Project
+        type: AWS_LAMBDA
+        config:
+          lambdaFunctionArn: { Fn::GetAtt: [ProjectLambdaFunction, Arn] }
+      - name: Subscription
+        type: AWS_LAMBDA
+        config:
+          lambdaFunctionArn: { Fn::GetAtt: [SubscriptionLambdaFunction, Arn] }
+
+    # substitutions: # allows to pass variables from here to velocity templates
+    #   # ${exampleVar1} will be replaced with given value in all mapping templates
+    #   exampleVar1: "${self:service.name}"
+    #   exampleVar2: {'Fn::ImportValue': 'Some-external-stuff'}
+    # xrayEnabled: true # Bool, Optional. Enable X-Ray. disabled by default.
+    wafConfig:
+      enabled: true
+      name: APIAppSyncWAF-${self:provider.stage}
+    #   defaultAction: Allow # or Block. Defaults to Allow
+      description: 'API AppSync WAF rules'
+    #   rules:
+    #     - throttle: 100
+    #     - disableIntrospection
+    #     - name: UsOnly
+    #       action: Block # Allow, Block, or Count
+    #       statement:
+    #         NotStatement:
+    #           Statement:
+    #             GeoMatchStatement:
+    #               CountryCodes:
+    #                 - US
+    #
+    # tags: # Tags to be added to AppSync
+    #   key1: value1
+    #   key2: value2
+
+plugins:
+  - serverless-appsync-plugin

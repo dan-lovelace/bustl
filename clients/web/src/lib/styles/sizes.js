@@ -1,0 +1,38 @@
+export const sizes = {
+  headerHeight: "h-16",
+  headerHeightTop: "top-16",
+  headerHeightOffset: "-top-16",
+  headerHeightTopPadding: "pt-16",
+  footerHeight: "h-14",
+  lineHeights: {
+    xs: "1rem",
+    sm: "1.25rem",
+    md: "1.5rem",
+    lg: "1.75rem",
+    xl: "1.75rem",
+  },
+  noteTypeColumnWidth: "68",
+  sidebar: {
+    // xs: "w-16",
+    md: "w-16",
+    lg: "lg:w-60",
+    closed: "w-16",
+    open: "w-60",
+  },
+  textSizes: {
+    xs: "0.75rem",
+    sm: "0.875rem",
+    md: "1rem",
+    lg: "1.125rem",
+    xl: "1.25rem",
+  },
+  tailwindTextSizes: {
+    xs: "text-xs",
+    sm: "text-sm",
+    md: "text-md",
+    lg: "text-lg",
+    xl: "text-xl",
+    "2xl": "text-2xl",
+    "3xl": "text-3xl",
+  },
+};

@@ -1,0 +1,450 @@
+schema {
+  mutation: Mutation
+  query: Query
+}
+
+type Query {
+  app_users: [AppUser]
+  @aws_auth(cognito_groups: ["system-admin"])
+
+  app_user(id: ID, cognito_id: ID): AppUser
+  @aws_auth(cognito_groups: ["system-admin"])
+
+  boards(filter: ListFilter): [Board]
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+
+  board(id: ID!): Board
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+
+  flush_image_cache: Boolean
+  @aws_auth(cognito_groups: ["system-admin"])
+
+  image_upload(file: File!): ImageUpload
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+
+  images: [Image]
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+
+  me: AppUser
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+
+  note(id: ID!): Note
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+
+  notes(filter: ListFilter): [Note]
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+
+  note_type(id: ID!): NoteType
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+
+  note_types(project_id: ID): [NoteType]
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+
+  project(id: ID!): Project
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+
+  projects: [Project]
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+
+  subscription_plans: [SubscriptionPlan]
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+}
+
+type Mutation {
+  acceptTerms: Boolean
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+
+  createAppUser(input: CreateAppUserInput!): AppUser
+  @aws_auth(cognito_groups: ["system-admin"])
+  updateAppUser(id: ID!, input: UpdateAppUserInput!): AppUser
+  @aws_auth(cognito_groups: ["system-admin"])
+  deleteAppUser(id: ID!): AppUser
+  @aws_auth(cognito_groups: ["system-admin"])
+
+  archiveBoards(ids: [ID]!): [Board]
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+  createBoard(input: CreateBoardInput!): Board
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+  updateBoard(id: ID!, input: UpdateBoardInput!): Board
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+  deleteBoards(ids: [ID]!): [ID]
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+
+  createBoardMarker(input: CreateBoardMarkerInput!): BoardMarker
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+  updateBoardMarker(id: ID!, input: UpdateBoardMarkerInput!): BoardMarker
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+  deleteBoardMarkers(ids: [ID]!): [ID]
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+
+  createCalendarEvent(input: CreateCalendarEventInput!): CalendarEvent
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+  updateCalendarEvent(id: ID!, input: UpdateCalendarEventInput!): CalendarEvent
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+  deleteCalendarEvents(ids: [ID]!): [ID]
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+
+  createContactMessage(input: CreateContactMessageInput!): ContactMessage
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+
+  updateMe(input: UpdateMeInput!): AppUser
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+  
+  createImage(input: CreateImageInput!): Image
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+  # updateImage(id: ID!, input: UpdateImageInput!): Image
+  # @aws_auth(cognito_groups: ["system-admin", "system-user"])
+  deleteImage(ids: [ID]!): [ID]
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+
+  createNote(input: CreateNoteInput!): Note
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+  updateNote(id: ID!, input: UpdateNoteInput!): Note
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+  deleteNotes(ids: [ID]!): [ID]
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+
+  createNoteType(input: CreateNoteTypeInput!): NoteType
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+  updateNoteType(id: ID!, input: UpdateNoteTypeInput!): NoteType
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+  deleteNoteTypes(ids: [ID]!): [ID]
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+
+  createProject(input: CreateProjectInput!): Project
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+  updateProject(id: ID!, input: UpdateProjectInput!): Project
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+  deleteProjects(ids: [ID]!): [ID]
+  @aws_auth(cognito_groups: ["system-admin", "system-user"])
+}
+
+# Object Types ------------------------------------------------------------------
+type AppUser @aws_auth {
+  id: ID!
+  @aws_auth(cognito_groups: ["system-admin"])
+  created_at: AWSDateTime!
+  @aws_auth(cognito_groups: ["system-admin"])
+  updated_at: AWSDateTime!
+  @aws_auth(cognito_groups: ["system-admin"])
+  active: Boolean!
+  @aws_auth(cognito_groups: ["system-admin"])
+
+  email: AWSEmail!
+  email_verified: Boolean!
+  cognito_id: String!
+  @aws_auth(cognito_groups: ["system-admin"])
+  must_accept_terms: Boolean!
+
+  subscription: Subscription
+}
+
+type Board {
+  id: ID!
+  created_at: AWSDateTime!
+  updated_at: AWSDateTime!
+  active: Boolean! # TODO: remove active from system-user view
+
+  app_user: AppUser!
+  archived: Boolean!
+  image: Image!
+
+  markers: [BoardMarker]
+}
+
+type BoardMarker {
+  id: ID!
+  created_at: AWSDateTime!
+  updated_at: AWSDateTime!
+
+  board: Board!
+  x_position: Int!
+  y_position: Int!
+  marker_type: BoardMarkerType!
+  hidden: Boolean!
+
+  note: Note
+  calendar_event: CalendarEvent
+  sort_position: Int
+}
+
+type CalendarEvent {
+  id: ID!
+  created_at: AWSDateTime!
+  updated_at: AWSDateTime!
+
+  archived: Boolean!
+  title: String!
+  start_time: AWSDateTime!
+  calendar_type: CalendarEventType!
+
+  end_time: AWSDateTime
+  all_day: Boolean
+  description: String
+}
+
+type ContactMessage {
+  id: ID!
+  created_at: AWSDateTime!
+  updated_at: AWSDateTime!
+
+  subject: String!
+  
+  body: String
+  rating: Int
+}
+
+type Image {
+  id: ID!
+  created_at: AWSDateTime!
+  updated_at: AWSDateTime!
+  active: Boolean!
+
+  src: String!
+
+  source: String!
+  thumbnail: String!
+
+  app_user: AppUser!
+}
+
+type ImageDownloadRequest {
+  download_url: String!
+}
+
+type ImageUpload {
+  upload_url: String!
+  form_json: String!
+}
+
+type Note {
+  id: ID!
+  created_at: AWSDateTime!
+  updated_at: AWSDateTime!
+  
+  note_type: NoteType!
+  title: String!
+  archived: Boolean!
+
+  body: String
+  sort_position: Int
+}
+
+type NoteType {
+  id: ID!
+  created_at: AWSDateTime!
+  updated_at: AWSDateTime!
+  
+  project: Project!
+  name: String!
+
+  notes: [Note]
+  sort_position: Int
+}
+
+type Project {
+  id: ID!
+  created_at: AWSDateTime!
+  updated_at: AWSDateTime!
+
+  name: String!
+ 
+  note_types: [NoteType]
+  sort_position: Int
+}
+
+type Subscription {
+  status: String!
+  plan: SubscriptionPlan!
+  usage: SubscriptionUsage!
+}
+
+type SubscriptionEvent {
+  id: ID!
+  created_at: AWSDateTime!
+  updated_at: AWSDateTime!
+  active: Boolean!
+
+  app_user: AppUser!
+  event_type: SubscriptionEventType!
+}
+
+type SubscriptionFeature {
+  name: String!
+  flags: [SubscriptionFeatureFlag]!
+}
+
+type SubscriptionFeatureFlag {
+  key: String!
+  value: String!
+  description: String
+}
+
+type SubscriptionPlan {
+  name: String!
+  features: [SubscriptionFeature]!
+}
+
+type SubscriptionUsage {
+  board_create_monthly: SubscriptionUsageItem!
+  board_create_total_active: SubscriptionUsageItem!
+  image_upload_request_monthly: SubscriptionUsageItem!
+}
+
+type SubscriptionUsageItem {
+  current: String!
+  flag: SubscriptionFeatureFlag!
+}
+
+# Input Types ------------------------------------------------------------------
+input CreateAppUserInput {
+  cognito_id: String!
+  cognito_group: CognitoGroup!
+}
+
+input UpdateAppUserInput {
+  email: AWSEmail
+}
+
+input CreateBoardInput {
+  image_id: ID!
+}
+
+input UpdateBoardInput {
+  archived: Boolean
+}
+
+input CreateCalendarEventInput {
+  title: String!
+  start_time: AWSDateTime!
+  calendar_type: CalendarEventType!
+
+  end_time: AWSDateTime
+  all_day: Boolean
+  description: String
+}
+
+input UpdateCalendarEventInput {
+  title: String
+  start_time: AWSDateTime
+  calendar_type: CalendarEventType
+  end_time: AWSDateTime
+  all_day: Boolean
+  description: String
+  archived: Boolean
+}
+
+input CreateContactMessageInput {
+  subject: String!
+
+  body: String
+  rating: Int
+}
+
+input UpdateContactMessageInput {
+  subject: String
+  body: String
+  rating: Int
+}
+
+input CreateImageInput {
+  key: String!
+}
+
+input CreateBoardMarkerInput {
+  board_id: ID!
+  x_position: Int!
+  y_position: Int!
+  marker_type: BoardMarkerType!
+
+  hidden: Boolean
+  note_id: ID
+  calendar_event_id: ID
+}
+
+input UpdateBoardMarkerInput {
+  x_position: Int
+  y_position: Int
+  active: Boolean
+}
+
+input UpdateMeInput {
+  email: AWSEmail
+}
+
+input CreateNoteInput {
+  note_type_id: ID!
+  title: String!
+
+  body: String
+}
+
+input UpdateNoteInput {
+  note_type_id: ID
+  title: String
+  body: String
+  archived: Boolean
+  sort_position: Int
+}
+
+input CreateNoteTypeInput {
+  project_id: ID!
+  name: String!
+}
+
+input UpdateNoteTypeInput {
+  project_id: ID
+  name: String
+  sort_position: Int
+}
+
+input CreateProjectInput {
+  name: String!
+}
+
+input UpdateProjectInput {
+  name: String
+  sort_position: Int
+}
+
+input File {
+  name: String!
+  content_type: String! # [image/jpeg, image/png...] validated in handler because `enum` is incompatible
+}
+
+input ListFilter {
+  archived: Boolean
+}
+
+# Enums ------------------------------------------------------------------
+enum BoardMarkerType {
+  new_note
+  new_calendar_event
+}
+
+enum CalendarEventType {
+  google
+  outlook
+  office365
+  yahoo
+  ics
+}
+
+enum CognitoGroup {
+  system_admin
+  system_user
+}
+
+enum StripePlanID {
+  BASIC_PLAN
+  FREE_PLAN
+}
+
+enum StripePriceInterval {
+  monthly
+}
+
+enum SubscriptionEventType {
+  board_create
+  image_upload_request
+}
